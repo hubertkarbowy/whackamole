@@ -42,10 +42,10 @@ string intarr_to_str(unsigned short int* rewards, int len) {
 
 // note 1: state_as_base3_buf has to be allocated
 // note 2: state_as_base3_buf will hold the number in least-significant-digit first order
-void to_base3_buf(unsigned short int state, char* state_as_base3_buf) {
+void to_base3_buf(unsigned short int state, char* state_as_base3_buf, int num_holes) {
     char rem = 0;
     unsigned char cnt = 0;
-    for (int i=0; i<NUM_HOLES; i++) state_as_base3_buf[i] = 0;
+    for (int i=0; i<num_holes; i++) state_as_base3_buf[i] = 0;
     // print_arr(state_as_base3_buf);
     do {
         rem = state % 3;
@@ -54,18 +54,18 @@ void to_base3_buf(unsigned short int state, char* state_as_base3_buf) {
         cnt++;
     } while (state > 0);
     // To reverse the array so that it can be printed as a base-3 number:
-    // for (int i=0; i<NUM_HOLES/2; i++) {
-    //     cout << "Swapping " << i << " with " << (NUM_HOLES) - i - 1 << endl;
+    // for (int i=0; i<num_holes/2; i++) {
+    //     cout << "Swapping " << i << " with " << (num_holes) - i - 1 << endl;
     //     char tmp = state_as_base3_buf[i];
-    //     state_as_base3_buf[i] = state_as_base3_buf[NUM_HOLES - i - 1];
-    //     state_as_base3_buf[NUM_HOLES - i - 1] = tmp;
+    //     state_as_base3_buf[i] = state_as_base3_buf[num_holes - i - 1];
+    //     state_as_base3_buf[num_holes - i - 1] = tmp;
     // }
 }
 
-unsigned short int base3_to_int(char* base3_buf) {
+unsigned short int base3_to_int(char* base3_buf, int num_holes) {
     unsigned short int ret = 0;
     unsigned short int base3_pow = 1;
-    for (int i=0; i<NUM_HOLES; i++) {
+    for (int i=0; i<num_holes; i++) {
         ret += base3_buf[i]*base3_pow;
         base3_pow *= 3;
     }

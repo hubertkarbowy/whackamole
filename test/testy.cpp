@@ -84,13 +84,13 @@ public:
 protected:
     void testIntToBase3() {
         for (int q=0; q<num_test_states; q++) {
-            to_base3_buf(this->test_states_decimal[q], this->base3_buf);
+            to_base3_buf(this->test_states_decimal[q], this->base3_buf, NUM_HOLES);
             CPPUNIT_ASSERT_EQUAL_ARR(this->base3_buf, gold_states_base3[q], NUM_HOLES);
         }
     }
     void testBase3ToInt() {
         for (int q=0; q<num_test_states; q++) {
-            CPPUNIT_ASSERT_EQUAL(base3_to_int(gold_states_base3[q]), test_states_decimal[q]);
+            CPPUNIT_ASSERT_EQUAL(base3_to_int(gold_states_base3[q], NUM_HOLES), test_states_decimal[q]);
         }
     }
     void testTransitionsAndRewards() {

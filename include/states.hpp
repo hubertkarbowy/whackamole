@@ -5,7 +5,7 @@
 #include <helpers.hpp>
 
 
-bool is_terminal_state(char* base3_buf);
+bool is_terminal_state(char* base3_buf, int num_holes);
 void all_transitions_and_rewards(unsigned short int curr_state,
                                  unsigned short int* transitions,
                                  char* rewards,

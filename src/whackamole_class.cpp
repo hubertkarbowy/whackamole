@@ -58,8 +58,8 @@ WhacQaMole::~WhacQaMole() {
  *
  */
 bool WhacQaMole::learn_step() {
-    to_base3_buf(current_state, temp_base3_buf);
-    if (is_terminal_state(temp_base3_buf)) { // do not perform updates if we detect a terminal state at the outset
+    to_base3_buf(current_state, temp_base3_buf, num_holes);
+    if (is_terminal_state(temp_base3_buf, num_holes)) { // do not perform updates if we detect a terminal state at the outset
         return true;
     }
 
@@ -73,7 +73,7 @@ bool WhacQaMole::learn_step() {
     // cout << "Next rewards:\n";
     // print_arr(this->temp_transition_rewards, this->num_holes+1);
     if (this->POLICY == Random) {
-        // int hole_to_hit = rand() % (NUM_HOLES + 1);
+        // int hole_to_hit = rand() % (num_holes + 1);
         unsigned short int prev_state = current_state;
         int hole_to_hit = this->random_hole_dist(rand_engine);
         char transition_reward = temp_transition_rewards[hole_to_hit];
@@ -81,7 +81,7 @@ bool WhacQaMole::learn_step() {
         cout << ". Next state is " << temp_transitions[hole_to_hit];
         // cout << " with a reward of " << to_string(temp_transition_rewards[hole_to_hit]) << endl;
         current_state = temp_transitions[hole_to_hit];
-        to_base3_buf(current_state, temp_base3_buf);
+        to_base3_buf(current_state, temp_base3_buf, num_holes);
         all_transitions_and_rewards(this->current_state, this->temp_transitions,
                                     this->temp_transition_rewards, this->temp_base3_buf,
                                     this->num_holes);
@@ -98,7 +98,7 @@ bool WhacQaMole::learn_step() {
         exit(-1);
     }
    
-    return is_terminal_state(temp_base3_buf);
+    return is_terminal_state(temp_base3_buf, num_holes);
 }
 
 /** Set a new state randomly.
@@ -165,23 +165,3 @@ void WhacQaMole::deserialize(char* src) {
 
 #endif
 }
-
-// Select a valid next state based on policy and return the reward
-// Note - there is no need to keep the R table in memory because state transitions and
-// rewards can be computed from rules of the whack-a-mole game.
-int next_state(enum policy POLICY, char* curr_state_as_base3_buf, char* next_state_as_base3_buf) {
-    for (int i=0; i<NUM_HOLES; i++) next_state_as_base3_buf[i] = curr_state_as_base3_buf[i];
-    if (POLICY == Random) {
-        unsigned char hole_to_hit = rand() % NUM_HOLES;
-        cout << "Hitting hole " << hole_to_hit << endl;
-        // next_state_as_base3_buf[i] = 0;
-
-    }
-    else {
-        cout << "Only random learning policy is implemented.\n";
-        exit(-1);
-    }
-    return -1;
-}
-
-
