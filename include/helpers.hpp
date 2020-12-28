@@ -11,12 +11,13 @@
 #include <iostream>
 #include <string>
 
-void print_arr(void* rewards, int len, int data_type=CHAR_ARR);
+void print_arr(void* rewards, int len, int data_type=CHAR_ARR, bool eol=true);
 std::string charr_to_str(char* rewards, int len); // only for unit tests
 std::string intarr_to_str(unsigned short int* rewards, int len); // only for unit tests
 void to_base3_buf(unsigned short int state, char* state_as_base3_buf, int num_holes);
 unsigned short int base3_to_int(char* base3_buf, int num_holes);
 char max_charr(char* arr, int len);
+void argmax_charr(char* arr, int len, char* val, char* idx);
 
 class mlogger {
     public:

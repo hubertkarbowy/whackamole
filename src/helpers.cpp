@@ -5,7 +5,7 @@
 
 using namespace std;
 
-void print_arr(void* rewards, int len, int data_type) {
+void print_arr(void* rewards, int len, int data_type, bool eol) {
     for (int i=0; i<len; i++) {
         switch (data_type) {
             case (CHAR_ARR): {
@@ -21,7 +21,7 @@ void print_arr(void* rewards, int len, int data_type) {
             }
         }
     }
-    _D << "\n";
+    if (eol) _D << "\n";
 }
 
 string charr_to_str(char* rewards, int len) {
@@ -82,4 +82,25 @@ char max_charr(char* arr, int len) {
         if (arr[i] > found) found = arr[i];
     }
     return found;
+}
+
+/**
+ * Finds maximum element in an array of signed chars (-128 to 127) and its index.
+ *
+ * @param[in] arr           Pointer to the array
+ * @param len               Array length
+ * @param[out] val          The maximum value
+ * @param[out] idx          Index of the maximum value
+ */
+void argmax_charr(char* arr, int len, char* val, char* idx) {
+    char found = SCHAR_MIN; // -128
+    char pos = -1;
+    for (int i=0; i<len; i++) {
+        if (arr[i] > found) {
+            found = arr[i];
+            pos = (char)i;
+        }
+    }
+    *val = found;
+    *idx = pos;
 }

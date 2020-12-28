@@ -5,6 +5,15 @@
 
 enum policy {Random};
 
+struct game_result {
+    short total_reward;
+    unsigned char total_steps;
+    unsigned char num_evil_moles;
+    unsigned char num_good_moles;
+    unsigned char num_empty;
+    bool whacked;
+};
+
 class WhacQaMole {
     unsigned char num_holes;
     unsigned short int num_states;
@@ -20,7 +29,7 @@ class WhacQaMole {
     std::uniform_int_distribution<int> random_hole_dist;
 
     // TODO: use the fields below after connecting to TF Lite
-    std::atomic_bool is_initialized;
+    std::atomic_bool _initialized;
     std::atomic_bool is_hitting;
 
     public:
@@ -32,6 +41,10 @@ class WhacQaMole {
     void set_current_state(unsigned short int new_state);
     void serialize(char* dest);
     void deserialize(char* src);
+    bool is_initialized();
+    void set_initialized(bool val);
+    // bool play(unsigned char max_attempts, short* total_reward, unsigned short* steps_taken);
+    bool play(unsigned char max_attempts, short* total_reward, unsigned short* steps_taken);
 }; 
 
 #endif

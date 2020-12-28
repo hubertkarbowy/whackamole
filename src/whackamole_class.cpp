@@ -41,7 +41,7 @@ WhacQaMole::WhacQaMole(unsigned char num_holes, enum policy POLICY) {
     this->temp_transitions = new unsigned short int[num_holes+1];
     this->temp_transition_rewards = new char[num_holes+1];
     this->POLICY = POLICY;
-    this->is_initialized = true;
+    this->_initialized = false;
 }
 
 WhacQaMole::~WhacQaMole() {
@@ -103,7 +103,7 @@ bool WhacQaMole::learn_step() {
 
 /** Set a new state randomly.
  *
- * Used at learning time.
+ * At learning time used to switch between episodes.
  */
 void WhacQaMole::reset() {
     this->current_state = this->uniform_dist(rand_engine);
@@ -153,15 +153,109 @@ void WhacQaMole::serialize(char* dest) {
 
 void WhacQaMole::deserialize(char* src) {
 #ifdef COMPILE_FOR_PC
+    unsigned char f_num_holes = 0;
+    unsigned short int f_num_states = 0;
+    float f_gamma = 0.0;
     ifstream f(src, ios::out | ios::binary);
-    f.ignore(5, EOF);
-    f.read((char*)(&num_holes), sizeof(num_holes));
-    f.read((char*)(&num_states), sizeof(num_states));
+    if (!f) {
+        _D << "Cannot read file " << src << ".\n";
+        exit(-10);
+    }
+    f.ignore(5, EOF); // M@G1C signature - todo: check for its presence
+    f.read((char*)(&f_num_holes), sizeof(f_num_holes));
+    f.read((char*)(&f_num_states), sizeof(f_num_states));
+    if (f_num_holes != this->num_holes || f_num_states != this->num_states) {
+        _D << "Error deserializing the Q matrix. Expected to see " << to_string(num_holes) << " holes ";
+        _D << "and " << to_string(num_states) << " states, but file `" << src << "` has ";
+        _D << to_string(f_num_holes) << " and " << to_string(f_num_states) << " respectively.\n";
+        f.close();
+        exit(-10);
+    }
+    f.read((char*)(&f_gamma), sizeof(f_gamma));
+    f.ignore(5, EOF); // QARRY signature - todo: check for its presence
+    char val = 0;
+    for (int i=0; i<f_num_states; i++) {
+        for (int j=0; j<f_num_holes+1; j++) {
+            f.read((char*)(&val), sizeof(val));
+            Q[i][j] = val;
+        }
+    } // todo: checksum?
 
+    this->num_holes = f_num_holes; // this is redundant because of the above check, but I'm keeping it
+    this->num_states = f_num_states; // in case I want to deserialize arbitrary files.
+    this->gamma = f_gamma; // in case I want to deserialize arbitrary files.
+    this->_initialized = true;
     cout << "Restored the game with " << to_string(num_holes) << " holes and ";
     cout << to_string(num_states) << " states \n";
     f.close();
 #else
 
 #endif
+}
+
+bool WhacQaMole::is_initialized() {
+    return (bool) this->_initialized;
+}
+
+void WhacQaMole::set_initialized(bool val) {
+    this->_initialized = val;
+}
+
+/** Plays a single game, beginning from WhacQaMole#current_state
+ *
+ * Using the pre-trained Q matrix, the agent attempts to hit all "evil" moles
+ * existing in the WhacQaMole#current_state without hitting either empty
+ * holes or "good" moles.
+ *
+ * @param[in] max_attempts      The maximum number of attempts before the agent gives up.
+ * @param[out] total_reward     Total number of points collected as rewards on state transitions.
+ * @param[out] total_whacks     Total number of whacks before reaching the final state or giving up.
+ * @returns                     True if the agent found the final state, false if it gave up.
+ *
+ *
+ */
+bool WhacQaMole::play(unsigned char max_attempts, short* total_reward, unsigned short* steps_taken) {
+    short _reward = 0;
+    unsigned short _steps = 0;
+    bool ret = false;
+    to_base3_buf(current_state, temp_base3_buf, num_holes);
+    _D << "   *** Playing from state " << to_string(current_state) << ", as base3: ";
+    print_arr(this->temp_base3_buf, this->num_holes, CHAR_ARR, false);
+    _D << ", rewards: ";
+    print_arr(this->Q[current_state], this->num_holes+1, CHAR_ARR);
+    unsigned char i = max_attempts;
+    while (i>0) {
+        if (is_terminal_state(temp_base3_buf, num_holes)) {
+            ret = true;
+            break;
+        }
+        char val = SCHAR_MIN;
+        char idx = -1;
+        unsigned short int next_state = current_state;
+        argmax_charr(Q[current_state], num_holes+1, &val, &idx);
+        _D << "  I= " << to_string(i) << " DECISION: ";
+        if (idx != -1) {
+            if (idx != num_holes) {
+                _D << "Hitting hole " << to_string(idx) << " with a reward of " << to_string(val) << ".\n";
+                temp_base3_buf[(unsigned char)idx] = 0; // remove anything in a hole
+                next_state = base3_to_int(temp_base3_buf, num_holes);
+            }
+            else {
+                _D << "No hit.\n";
+            }
+        }
+        else { _D << "Oops, something looks broken.\n"; }
+        to_base3_buf(next_state, temp_base3_buf, num_holes);
+        _D << "  I= " << to_string(i) << " NEXT STATE: " << to_string(next_state) << ", as base3: ";
+        print_arr(temp_base3_buf, num_holes, CHAR_ARR, false);
+        _D << ", rewards: ";
+        print_arr(this->Q[next_state], this->num_holes+1, CHAR_ARR);
+        this->current_state = next_state;
+        _reward += val;
+        _steps++;
+        i--;
+    }
+    *total_reward = _reward;
+    *steps_taken = _steps;
+    return ret;
 }
