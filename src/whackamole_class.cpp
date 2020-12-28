@@ -208,15 +208,17 @@ void WhacQaMole::set_initialized(bool val) {
  * holes or "good" moles.
  *
  * @param[in] max_attempts      The maximum number of attempts before the agent gives up.
- * @param[out] total_reward     Total number of points collected as rewards on state transitions.
- * @param[out] total_whacks     Total number of whacks before reaching the final state or giving up.
+ * @param[out] res              A #game_result struct to store various game statistics (or nullptr)
  * @returns                     True if the agent found the final state, false if it gave up.
  *
  *
  */
-bool WhacQaMole::play(unsigned char max_attempts, short* total_reward, unsigned short* steps_taken) {
+bool WhacQaMole::play(unsigned char max_attempts, struct game_result* res) {
     short _reward = 0;
-    unsigned short _steps = 0;
+    unsigned char _steps = 0;
+    unsigned char _evil_moles = 0;
+    unsigned char _good_moles = 0;
+    unsigned char _empty_holes = 0;
     bool ret = false;
     to_base3_buf(current_state, temp_base3_buf, num_holes);
     _D << "   *** Playing from state " << to_string(current_state) << ", as base3: ";
@@ -237,6 +239,11 @@ bool WhacQaMole::play(unsigned char max_attempts, short* total_reward, unsigned 
         if (idx != -1) {
             if (idx != num_holes) {
                 _D << "Hitting hole " << to_string(idx) << " with a reward of " << to_string(val) << ".\n";
+                switch (temp_base3_buf[(unsigned char)idx]) {
+                    case 0: _empty_holes++; break;
+                    case 1: _good_moles++; break;
+                    case 2: _evil_moles++; break;
+                }
                 temp_base3_buf[(unsigned char)idx] = 0; // remove anything in a hole
                 next_state = base3_to_int(temp_base3_buf, num_holes);
             }
@@ -255,7 +262,12 @@ bool WhacQaMole::play(unsigned char max_attempts, short* total_reward, unsigned 
         _steps++;
         i--;
     }
-    *total_reward = _reward;
-    *steps_taken = _steps;
+    if (res != nullptr) {
+        res->total_reward = _reward;
+        res->steps_taken = _steps;
+        res->num_evil_moles = _evil_moles;
+        res->num_good_moles = _good_moles;
+        res->num_empty = _empty_holes;
+    }
     return ret;
 }

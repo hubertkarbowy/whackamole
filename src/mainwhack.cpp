@@ -1,8 +1,10 @@
 #include <mainwhack.hpp>
 #include <whackamole_class.hpp>
 #include <helpers.hpp>
-#include "getopt.h"
 
+#ifdef COMPILE_FOR_PC
+#include "getopt.h"
+#endif
 
 using namespace std;
 
@@ -10,6 +12,7 @@ enum SIMULATOR_OPERATION {train, play};
 enum SERIALIZATION_OPERATION {serialize, deserialize, noop};
 
 // PC simulator only
+#ifdef COMPILE_FOR_PC
 int main(int argc, char** argv) {
     int num_holes = 8;
     int num_episodes = -1;
@@ -85,12 +88,13 @@ int main(int argc, char** argv) {
         }
         for (int i=0; i<num_episodes; i++) {
             _D << "=================== EPISODE " << i << " ========================\n";
-            struct game_result res = {0, 0, 0, 0, 0, false};
-            short total_reward = 0;
-            unsigned short total_steps = 0;
-            bool whacked = game->play(10, &total_reward, &total_steps);
-            _D << "  SUMMARY:\n    - Total reward: " << to_string(total_reward) << "\n";
-            _D << "    - Number of steps: " << to_string(total_steps) << "\n";
+            struct game_result res = {0, 0, 0, 0, 0};
+            bool whacked = game->play(10, &res);
+            _D << "  SUMMARY:\n    - Total reward: " << to_string(res.total_reward) << "\n";
+            _D << "    - Number of steps: " << to_string(res.steps_taken) << "\n";
+            _D << "    - Evil: " << to_string(res.num_evil_moles);
+            _D << ", Good: " << to_string(res.num_good_moles) << ", Empty: ";
+            _D << to_string(res.num_empty) << "\n";
             _D << "    - Whacked: " << to_string(whacked) << "\n";
             game->reset();
         }
@@ -104,3 +108,4 @@ int main(int argc, char** argv) {
         game->serialize(fname);
     }
 }
+#endif

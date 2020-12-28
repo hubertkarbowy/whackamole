@@ -7,7 +7,7 @@ enum policy {Random};
 
 struct game_result {
     short total_reward;
-    unsigned char total_steps;
+    unsigned char steps_taken;
     unsigned char num_evil_moles;
     unsigned char num_good_moles;
     unsigned char num_empty;
@@ -44,7 +44,7 @@ class WhacQaMole {
     bool is_initialized();
     void set_initialized(bool val);
     // bool play(unsigned char max_attempts, short* total_reward, unsigned short* steps_taken);
-    bool play(unsigned char max_attempts, short* total_reward, unsigned short* steps_taken);
+    bool play(unsigned char max_attempts, struct game_result* res);
 }; 
 
 #endif
