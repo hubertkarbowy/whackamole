@@ -45,7 +45,7 @@ void all_transitions_and_rewards(unsigned short int curr_state,
          char hole = base3_buf[i]; // save the state of a single hole
          base3_buf[i] = 0; // hit the hole with a hammer - if a mole was there, it now disappeared. if it was empty, it's still empty.
          transitions[i] = base3_to_int(base3_buf, num_holes); // state after hitting the ith hole
-         //   std::cout << "After transition the state is " << transitions[i] << std::endl;
+         //   _D << "After transition the state is " << transitions[i] << std::endl;
          switch (hole) {
              case 0: rewards[i] = MISS;    // hit an empty hole
                      break;

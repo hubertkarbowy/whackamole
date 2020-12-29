@@ -1,5 +1,3 @@
-#include <iostream>
-#include <mainwhack.hpp>
 #include <helpers.hpp>
 #include <limits.h>
 
@@ -55,7 +53,7 @@ void to_base3_buf(unsigned short int state, char* state_as_base3_buf, int num_ho
     } while (state > 0);
     // To reverse the array so that it can be printed as a base-3 number:
     // for (int i=0; i<num_holes/2; i++) {
-    //     cout << "Swapping " << i << " with " << (num_holes) - i - 1 << endl;
+    //     _D << "Swapping " << i << " with " << (num_holes) - i - 1 << endl;
     //     char tmp = state_as_base3_buf[i];
     //     state_as_base3_buf[i] = state_as_base3_buf[num_holes - i - 1];
     //     state_as_base3_buf[num_holes - i - 1] = tmp;
@@ -104,3 +102,9 @@ void argmax_charr(char* arr, int len, char* val, char* idx) {
     *val = found;
     *idx = pos;
 }
+
+#ifdef COMPILE_FOR_DUINO
+void say_ping() {
+    Serial.write("Pinging...\n");
+}
+#endif

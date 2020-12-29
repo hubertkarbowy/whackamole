@@ -1,4 +1,6 @@
 bin/*
 obj/*
+duino_tmp/*
+duino_tmp_cache/*
 *.bin
 *.bak

@@ -1,10 +1,8 @@
-#include <mainwhack.hpp>
-#include <whackamole_class.hpp>
-#include <helpers.hpp>
-
 #ifdef COMPILE_FOR_PC
+#include <mainwhack.hpp>
+#include <helpers.hpp>
+#include <whackamole_class.hpp>
 #include "getopt.h"
-#endif
 
 using namespace std;
 
@@ -12,7 +10,6 @@ enum SIMULATOR_OPERATION {train, play};
 enum SERIALIZATION_OPERATION {serialize, deserialize, noop};
 
 // PC simulator only
-#ifdef COMPILE_FOR_PC
 int main(int argc, char** argv) {
     int num_holes = 8;
     int num_episodes = -1;

@@ -1,0 +1,26 @@
+
+# Arduino MBED Core and platform.
+#
+# For more info:
+# https://github.com/arduino/Arduino/wiki/Arduino-IDE-1.5---3rd-party-Hardware-specification
+
+name=Arduino Mbed OS Boards (nRF52840 / STM32H747)
+version=1.3.1
+
+# Compile variables
+# ------------------------
+
+# this can be overriden in boards.txt
+build.extra_flags=
+build.extra.startobjects=
+build.extra.endobjects=
+compiler.mbed=
+
+# These can be overridden in platform.local.txt
+compiler.c.extra_flags=
+compiler.c.elf.extra_flags=
+compiler.S.extra_flags=
+compiler.cpp.extra_flags=-I{build.path}/sketch/include -DCOMPILE_FOR_DUINO
+compiler.ar.extra_flags=
+compiler.objcopy.eep.extra_flags=
+compiler.elf2hex.extra_flags=

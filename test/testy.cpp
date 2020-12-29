@@ -1,5 +1,6 @@
+#ifdef COMPILE_FOR_PC
 #include <iostream>
-#include <whackamole.hpp>
+#include <mainwhack.hpp>
 #include <helpers.hpp>
 #include <states.hpp>
 #include <cppunit/TestCase.h>
@@ -124,3 +125,4 @@ int main() {
     testrunner.addTest (CPPUNIT_NS::TestFactoryRegistry::getRegistry().makeTest ());
     testrunner.run();
 }
+#endif

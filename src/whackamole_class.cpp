@@ -34,8 +34,8 @@ WhacQaMole::WhacQaMole(unsigned char num_holes, enum policy POLICY) {
     this->uniform_dist = uniform_int_distribution<unsigned short int>(0, num_states);
     this->current_state = this->uniform_dist(rand_engine);
     
-    cout << "Created the game with " << num_states << " states and ";
-    cout << total_transitions << " transitions. Initial state is " << this->current_state << std::endl;
+    _D << "Created the game with " << num_states << " states and ";
+    _D << total_transitions << " transitions. Initial state is " << this->current_state << "\n";
     // initialize temporary buffers:
     this->temp_base3_buf = new char[num_holes];
     this->temp_transitions = new unsigned short int[num_holes+1];
@@ -68,33 +68,33 @@ bool WhacQaMole::learn_step() {
                                 this->num_holes);
     _D << "Current state is " << current_state << ", as base3: ";
     print_arr(this->temp_base3_buf, this->num_holes);
-    cout << "Next states:\n";
+    _D << "Next states:\n";
     print_arr(this->temp_transitions, this->num_holes+1, UINT_ARR);
-    // cout << "Next rewards:\n";
+    // _D << "Next rewards:\n";
     // print_arr(this->temp_transition_rewards, this->num_holes+1);
     if (this->POLICY == Random) {
         // int hole_to_hit = rand() % (num_holes + 1);
         unsigned short int prev_state = current_state;
         int hole_to_hit = this->random_hole_dist(rand_engine);
         char transition_reward = temp_transition_rewards[hole_to_hit];
-        cout << "Will hit hole " << hole_to_hit << " with a transition reward of " << to_string(transition_reward);
-        cout << ". Next state is " << temp_transitions[hole_to_hit];
-        // cout << " with a reward of " << to_string(temp_transition_rewards[hole_to_hit]) << endl;
+        _D << "Will hit hole " << hole_to_hit << " with a transition reward of " << to_string(transition_reward);
+        _D << ". Next state is " << temp_transitions[hole_to_hit];
+        // _D << " with a reward of " << to_string(temp_transition_rewards[hole_to_hit]) << "\n";
         current_state = temp_transitions[hole_to_hit];
         to_base3_buf(current_state, temp_base3_buf, num_holes);
         all_transitions_and_rewards(this->current_state, this->temp_transitions,
                                     this->temp_transition_rewards, this->temp_base3_buf,
                                     this->num_holes);
         char selected_max = max_charr(this->Q[current_state], this->num_holes+1);
-        cout << " and known Q-rewards from there are: ";
+        _D << " and known Q-rewards from there are: ";
         print_arr(this->Q[current_state], this->num_holes+1);
-        cout << "Therefore, the selected max is " << to_string(selected_max) << endl;
+        _D << "Therefore, the selected max is " << to_string(selected_max) << "\n";
         char updated_q = fmax(SCHAR_MIN, fmin(SCHAR_MAX, (char)round(transition_reward + (gamma*selected_max))));
-        cout << "Q(" << prev_state << ", " << current_state << ") = " << to_string(transition_reward) << " + " << gamma << "*" << to_string(selected_max) << " = " << to_string(updated_q) << endl;
+        _D << "Q(" << prev_state << ", " << current_state << ") = " << to_string(transition_reward) << " + " << gamma << "*" << to_string(selected_max) << " = " << to_string(updated_q) << "\n";
         Q[prev_state][hole_to_hit] = updated_q;
     }
     else {
-        cout << "Unknown policy!\n";
+        _D << "Unknown policy!\n";
         exit(-1);
     }
    
@@ -145,9 +145,9 @@ void WhacQaMole::serialize(char* dest) {
         }
     }
     f.close();
-    cout << "Wrote the Q-array to " << dest << endl;
+    _D << "Wrote the Q-array to " << dest << "\n";
 #else
-    cout << "Not implemented\n";
+    _D << "Not implemented\n";
 #endif
 }
 
@@ -185,8 +185,8 @@ void WhacQaMole::deserialize(char* src) {
     this->num_states = f_num_states; // in case I want to deserialize arbitrary files.
     this->gamma = f_gamma; // in case I want to deserialize arbitrary files.
     this->_initialized = true;
-    cout << "Restored the game with " << to_string(num_holes) << " holes and ";
-    cout << to_string(num_states) << " states \n";
+    _D << "Restored the game with " << to_string(num_holes) << " holes and ";
+    _D << to_string(num_states) << " states \n";
     f.close();
 #else
 
