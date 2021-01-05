@@ -62,7 +62,7 @@ duino: $(DUINO_TMP_DIR) $(DUINO_TMP_CACHE)
 	@echo "* Completed compilation with arduino-build.                                     *"
 	@echo "*********************************************************************************"
 	@echo ""
-	@echo "Now you can lash the binary to your board using this command:"
+	@echo "Now you can flash the binary to your board using this command:"
 	@echo "sudo ${HOME}/.arduino15/packages/arduino/tools/bossac/1.9.1-arduino2/bossac -d --port=ttyACM0 -U -i -a -w ./duino_tmp/arduino_main.ino.bin -R"
 
 ${EXE}: ${OBJ} ${MAIN_OBJ} | $(BIN_DIR) # Note that $BIN_DIR might not exist yet - let's tell make that you want it to check for that first

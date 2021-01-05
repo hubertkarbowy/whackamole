@@ -9,6 +9,7 @@
 
 #include <mainwhack.hpp>
 #include <string>
+#include <sstream>
 
 #ifdef COMPILE_FOR_PC
 #include <iostream>
@@ -25,9 +26,6 @@ void to_base3_buf(unsigned short int state, char* state_as_base3_buf, int num_ho
 unsigned short int base3_to_int(char* base3_buf, int num_holes);
 char max_charr(char* arr, int len);
 void argmax_charr(char* arr, int len, char* val, char* idx);
-#ifdef COMPILE_FOR_DUINO
-void say_ping();
-#endif
 
 class mlogger {
     public:
@@ -37,8 +35,13 @@ class mlogger {
         mlogger& operator<<(const T &v) { // ahh... to hell with body of a C++ template in a .cpp file
             #ifdef COMPILE_FOR_PC
             std::cout << v;
-            // #else
-            // put serial operations here
+            #else
+            #ifdef COMPILE_FOR_DUINO
+            std::stringstream ss;
+            ss << v;
+            const char* rett = ss.str().c_str();
+            Serial.write(rett);
+            #endif
             #endif
             return *this;
         }

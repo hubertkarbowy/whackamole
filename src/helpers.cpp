@@ -102,9 +102,3 @@ void argmax_charr(char* arr, int len, char* val, char* idx) {
     *val = found;
     *idx = pos;
 }
-
-#ifdef COMPILE_FOR_DUINO
-void say_ping() {
-    Serial.write("Pinging...\n");
-}
-#endif

@@ -1,16 +1,16 @@
 #include <stdlib.h>
 #include <whackamole_class.hpp>
+#include <whackrealtime.hpp> // this file uses the `rand_engine` global variable!
 #include <states.hpp>
 #include <helpers.hpp>
-#include <random>
 #include <climits>
 #include <cmath>
 
 #ifdef COMPILE_FOR_PC
 #include <fstream>
 #include <iostream>
+#include <random>
 #endif
-
 
 using namespace std;
 
@@ -27,12 +27,14 @@ WhacQaMole::WhacQaMole(unsigned char num_holes, enum policy POLICY) {
     }
     this->gamma = 0.8;
 
-    std::random_device r;
-    this->random_hole_dist = uniform_int_distribution<int>(0, num_holes); // not num_holes+1 because inclusive
+    // this->random_hole_dist = uniform_int_distribution<int>(0, num_holes); // not num_holes+1 because inclusive
+    // std::random_device r;
     // Randomly initialize the agent's state - this should be irrelevant when connected to TF and camera
-    this->rand_engine = std::default_random_engine(r());
-    this->uniform_dist = uniform_int_distribution<unsigned short int>(0, num_states);
-    this->current_state = this->uniform_dist(rand_engine);
+    // this->rand_engine = std::default_random_engine(r());
+    // this->uniform_dist = uniform_int_distribution<unsigned short int>(0, num_states);
+
+    //this->current_state = this->uniform_dist(rand_engine);
+    this->current_state = random_int_noarch(RND_STATES);
     
     _D << "Created the game with " << num_states << " states and ";
     _D << total_transitions << " transitions. Initial state is " << this->current_state << "\n";
@@ -68,14 +70,15 @@ bool WhacQaMole::learn_step() {
                                 this->num_holes);
     _D << "Current state is " << current_state << ", as base3: ";
     print_arr(this->temp_base3_buf, this->num_holes);
-    _D << "Next states:\n";
+    _D << "Next states: ";
     print_arr(this->temp_transitions, this->num_holes+1, UINT_ARR);
     // _D << "Next rewards:\n";
     // print_arr(this->temp_transition_rewards, this->num_holes+1);
-    if (this->POLICY == Random) {
+    if (this->POLICY == RandomPolicy) {
         // int hole_to_hit = rand() % (num_holes + 1);
         unsigned short int prev_state = current_state;
-        int hole_to_hit = this->random_hole_dist(rand_engine);
+        // int hole_to_hit = this->random_hole_dist(rand_engine);
+        int hole_to_hit = random_int_noarch(RND_HOLES);
         char transition_reward = temp_transition_rewards[hole_to_hit];
         _D << "Will hit hole " << hole_to_hit << " with a transition reward of " << to_string(transition_reward);
         _D << ". Next state is " << temp_transitions[hole_to_hit];
@@ -106,7 +109,12 @@ bool WhacQaMole::learn_step() {
  * At learning time used to switch between episodes.
  */
 void WhacQaMole::reset() {
-    this->current_state = this->uniform_dist(rand_engine);
+    // this->current_state = this->uniform_dist(rand_engine);
+    this->current_state = random_int_noarch(RND_STATES);
+    to_base3_buf(current_state, temp_base3_buf, num_holes);
+    _D << "Agent's state reset to " << to_string(current_state) << " (base3: ";
+    print_arr(temp_base3_buf, num_holes, CHAR_ARR, false);
+    _D << ")\n";
 }
 
 /** Gets the current state

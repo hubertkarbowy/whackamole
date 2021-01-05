@@ -2,6 +2,7 @@
 #include <mainwhack.hpp>
 #include <helpers.hpp>
 #include <whackamole_class.hpp>
+#include <whackrealtime.hpp>
 #include "getopt.h"
 
 using namespace std;
@@ -11,8 +12,14 @@ enum SERIALIZATION_OPERATION {serialize, deserialize, noop};
 
 // PC simulator only
 int main(int argc, char** argv) {
-    int num_holes = 8;
+
+    // _D << "Muteks: " << to_string(board_mutex.try_lock()) << "\n";
+    true_board_mutex.try_lock();
+    //_D << "Muteks: " << to_string(board_mutex.try_lock()) << "\n";
+    // _D << "Muteks: " << to_string(board_mutex.try_lock()) << "\n";
+
     int num_episodes = -1;
+    int num_holes = 8;
     char* fname = nullptr;
     enum SERIALIZATION_OPERATION ser_op = noop;
     enum SIMULATOR_OPERATION sim_op = train;
@@ -60,7 +67,8 @@ int main(int argc, char** argv) {
     }
     _D << "Running the simulator with the number of holes set to " << num_holes << "\n";
 
-    WhacQaMole* game = new WhacQaMole(num_holes, Random);
+    setup_rtos_primitives(num_holes);
+    WhacQaMole* game = new WhacQaMole(num_holes, RandomPolicy);
     if (ser_op == deserialize) {
         _D << "Attempting to deserialize from " << fname << "\n";
         game->deserialize(fname);

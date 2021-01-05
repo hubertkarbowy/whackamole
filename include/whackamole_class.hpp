@@ -1,9 +1,8 @@
 #ifndef __WHACKAMOLE_CLASS__
 #define __WHACKAMOLE_CLASS__
 #include <atomic>
-#include <random>
 
-enum policy {Random};
+enum policy {RandomPolicy};
 
 struct game_result {
     short total_reward;
@@ -24,9 +23,9 @@ class WhacQaMole {
     unsigned short int* temp_transitions; // This is less elegant than creating and destroying them several times, but more efficient.
     char* temp_transition_rewards;
     policy POLICY;
-    std::default_random_engine rand_engine;
-    std::uniform_int_distribution<unsigned short int> uniform_dist;
-    std::uniform_int_distribution<int> random_hole_dist;
+    // std::default_random_engine rand_engine;
+    // std::uniform_int_distribution<unsigned short int> uniform_dist;
+    // std::uniform_int_distribution<int> random_hole_dist;
 
     // TODO: use the fields below after connecting to TF Lite
     std::atomic_bool _initialized;
