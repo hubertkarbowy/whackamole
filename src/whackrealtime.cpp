@@ -1,22 +1,26 @@
 #include <whackrealtime.hpp>
 
+   std::atomic<unsigned char> agent_whacked_hole(NUM_HOLES-1); // nothing whacked by default
+   std::atomic<bool> supporting_threads_active(true);
 #ifdef COMPILE_FOR_PC
     #include <random>
     std::random_device r;
     std::default_random_engine rand_engine = std::default_random_engine(r());
-    std::mutex true_board_mutex;
+    std::mutex true_board_mutex, agent_play_mutex, camera_mutex;
+    std::condition_variable cv, cv_agent_play, cv_camera;
     struct whackamole_generators_cpp {
         std::uniform_int_distribution<unsigned char> rnd_hole_dist;
         std::uniform_int_distribution<unsigned short int> rnd_state_dist;
     } whackamole_generators_cpp;
 #else
 #ifdef COMPILE_FOR_DUINO
-    rtos::Semaphore true_board_semaphore;
+    // rtos::Semaphore true_board_semaphore(1); // binary semaphore will behave just like a mutex (yes, I know it isn't a mutex)
+    // mbed::Ticker board_ticker;
+    rtos::EventFlags cv_flags("WHACKAMOLE_FLAGS");
     struct whackamole_generators_duino {
         unsigned char num_holes;
         unsigned short int num_states;
     } whackamole_generators_duino;
-    mbed::Ticker board_ticker;
 #endif
 #endif
 
@@ -62,4 +66,96 @@ unsigned short int random_int_noarch(enum noarch_rnd NOARCH_RND) {
     }
 #endif
 #endif
+}
+
+void sleep_for_noarch(long millis) {
+#ifdef COMPILE_FOR_PC
+    std::this_thread::sleep_for(std::chrono::milliseconds(millis));
+#else
+#ifdef COMPILE_FOR_DUINO
+    rtos::ThisThread::sleep_for(millis);
+#endif
+#endif
+}
+
+void notify_single_thread_noarch(enum noarch_which_thread thr) {
+    #ifdef COMPILE_FOR_PC
+    switch (thr) {
+        case BOARD_THREAD:
+            {
+                std::unique_lock<std::mutex> lck(true_board_mutex);
+                cv.notify_all();
+                break;
+            }
+        case AGENT_THREAD:
+            {
+                std::unique_lock<std::mutex> lck(agent_play_mutex);
+                cv_agent_play.notify_all();
+                break;
+            }
+        case CAMERA_THREAD:
+            {
+                std::unique_lock<std::mutex> lck(camera_mutex);
+                cv_camera.notify_all();
+                break;
+            }
+        default: {}
+    }
+    #else
+    #ifdef COMPILE_FOR_DUINO
+    #endif
+    #endif
+}
+
+// return true if interrupted or notified, false otherwise. Will wait forever if timeout is set to zero.
+bool wait_on_cv_noarch(enum noarch_which_thread thr, uint32_t timeout_secs, void* args) {
+     bool ret = false;
+     #ifdef COMPILE_FOR_PC
+     switch (thr) {
+        case BOARD_THREAD:
+            {
+                std::unique_lock<std::mutex> lck(true_board_mutex);
+                if (timeout_secs != 0) {
+                    std::cv_status status = cv.wait_for(lck, std::chrono::seconds(timeout_secs));
+                    if (status == std::cv_status::timeout) ret = false;
+                    else ret = true;
+                }
+                else {
+                    cv.wait(lck);
+                }
+                break;
+            }
+        case AGENT_THREAD:
+            {
+                std::unique_lock<std::mutex> lck(agent_play_mutex);
+                if (timeout_secs != 0) {
+                    std::cv_status status = cv_agent_play.wait_for(lck, std::chrono::seconds(timeout_secs));
+                    if (status == std::cv_status::timeout) ret = false;
+                    else ret = true;
+                }
+                else {
+                    cv_agent_play.wait(lck);
+                }
+                break;
+            }
+        case CAMERA_THREAD: 
+            {
+                std::unique_lock<std::mutex> lck(camera_mutex);
+                if (timeout_secs != 0) {
+                    std::cv_status status = cv_camera.wait_for(lck, std::chrono::seconds(timeout_secs));
+                    if (status == std::cv_status::timeout) ret = false;
+                    else ret = true;
+                }
+                else {
+                    cv_camera.wait(lck);
+                }
+                break;
+            }
+        default: {}
+    }
+    #else
+    #ifdef COMPILE_FOR_DUINO
+    #endif
+    #endif
+    return ret;
 }

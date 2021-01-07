@@ -1,8 +1,11 @@
 #ifdef COMPILE_FOR_PC
+#include <vector>
 #include <mainwhack.hpp>
 #include <helpers.hpp>
-#include <whackamole_class.hpp>
 #include <whackrealtime.hpp>
+#include <whackamole_class.hpp>
+#include <mole_board.hpp>
+#include <tf_camera.hpp>
 #include "getopt.h"
 
 using namespace std;
@@ -10,20 +13,17 @@ using namespace std;
 enum SIMULATOR_OPERATION {train, play};
 enum SERIALIZATION_OPERATION {serialize, deserialize, noop};
 
+WhacQaMole* agent = nullptr; // using this together with extern is horrendous
+
 // PC simulator only
 int main(int argc, char** argv) {
-
-    // _D << "Muteks: " << to_string(board_mutex.try_lock()) << "\n";
-    true_board_mutex.try_lock();
-    //_D << "Muteks: " << to_string(board_mutex.try_lock()) << "\n";
-    // _D << "Muteks: " << to_string(board_mutex.try_lock()) << "\n";
-
     int num_episodes = -1;
     int num_holes = 8;
     char* fname = nullptr;
     enum SERIALIZATION_OPERATION ser_op = noop;
     enum SIMULATOR_OPERATION sim_op = train;
     int c;
+    std::vector<std::thread> supporting_threads;
     while (1) {
         static struct option simulator_opts[] = {
             {"num-holes",              required_argument, 0, 'h'},
@@ -67,50 +67,59 @@ int main(int argc, char** argv) {
     }
     _D << "Running the simulator with the number of holes set to " << num_holes << "\n";
 
-    setup_rtos_primitives(num_holes);
-    WhacQaMole* game = new WhacQaMole(num_holes, RandomPolicy);
+    // ======== SET UP THE AGENT AND OPTIONALLY DESERIALIZE PRETRAINED Q-MATRIX =====
+    setup_rtos_primitives(num_holes); // very important!
+    agent = new WhacQaMole(num_holes, RandomPolicy); // in the setup() function on mbed os
+    // WhacQaMole* game = new WhacQaMole(num_holes, RandomPolicy);
     if (ser_op == deserialize) {
         _D << "Attempting to deserialize from " << fname << "\n";
-        game->deserialize(fname);
+        // game->deserialize(fname);
+        agent->deserialize(fname);
     }
+
+    // ========= SET UP AND START THREADS =======
+    // std::thread mole_board(board_main);
+    // std::thread camera_thread(run_camera);
+    supporting_threads.emplace_back(std::thread(run_camera));
+    supporting_threads.emplace_back(std::thread(board_main));
 
     if (sim_op == train) {
         for (int i=0; i<num_episodes; i++) {
             _D << "=================== EPISODE " << i << " ========================\n";
             int step = 0;
-            while (game->learn_step() == false) {
+            while (agent->learn_step() == false) {
                 _D << "    ***** STEP " << step << " *****\n";
                 step++;
             }
-            game->reset();
+            agent->reset();
         }
-        game->set_initialized(true);
+        agent->set_initialized(true);
     }
     else if (sim_op == play) {
-        if (!game->is_initialized()) {
+        if (!agent->is_initialized()) {
             _D << "Please deserialize the Q matrix before playing.\n";
             exit(-2);
         }
-        for (int i=0; i<num_episodes; i++) {
-            _D << "=================== EPISODE " << i << " ========================\n";
-            struct game_result res = {0, 0, 0, 0, 0};
-            bool whacked = game->play(10, &res);
-            _D << "  SUMMARY:\n    - Total reward: " << to_string(res.total_reward) << "\n";
-            _D << "    - Number of steps: " << to_string(res.steps_taken) << "\n";
-            _D << "    - Evil: " << to_string(res.num_evil_moles);
-            _D << ", Good: " << to_string(res.num_good_moles) << ", Empty: ";
-            _D << to_string(res.num_empty) << "\n";
-            _D << "    - Whacked: " << to_string(whacked) << "\n";
-            game->reset();
+        std::thread agent_thread(agent_play_main, num_episodes);
+        for (int i=0; i<num_episodes; i++) { // loop forever on arduino?
+            sleep_for_noarch(1500); // simulates the time it takes the camera and TF module to process image
+            notify_single_thread_noarch(AGENT_THREAD);
+            wait_on_cv_noarch(AGENT_THREAD, 0);
+            agent->reset();
         }
+        agent_thread.join();
+        supporting_threads_active = false;
     }
 
     if (ser_op == serialize) {
-        if (!game->is_initialized()) {
+        if (!agent->is_initialized()) {
             _D << "Please train the Q matrix before serializing.\n";
             exit(-2);
         }
-        game->serialize(fname);
+        agent->serialize(fname);
     }
+    for (auto& t : supporting_threads) t.join();
+    // camera_thread.join();
+    // mole_board.join();
 }
 #endif

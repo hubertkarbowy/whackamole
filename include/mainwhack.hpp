@@ -7,6 +7,8 @@
 #define PENALTY -50
 #define REWARD 15 // moze byc zbyt mala rozdzielczosc dla typu char
 #define BOARD_TICKER_INTERVAL 3
+#define SIMULATION_WHACK_INTERVAL_MILLIS 1000
+#define MAX_HIT_ATTEMPTS 10
 
 
 /** The board state, as observed by the <b>agent</b>.
@@ -23,8 +25,6 @@ extern unsigned short int OBSERVED_BOARD_STATE;
  *  performance.
 */
 extern unsigned short int TRUE_BOARD_STATE;
-
-
 
 //
 //

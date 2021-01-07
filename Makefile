@@ -21,7 +21,7 @@ TEST_OBJ := $(TEST_SRC:$(SRCTEST_DIR)/%.cpp=$(OBJ_DIR)/%.o)
 CPPFLAGS := -Iinclude -I. -MMD -MP -DCOMPILE_FOR_PC
 CFLAGS   := -Wall
 LDFLAGS  := -Llib
-LDLIBS   := -lm
+LDLIBS   := -lm -lpthread
 LDLIBS_CPPUNIT := -lcppunit
 
 # The -MMD -MP flags are used to generate the header dependencies automatically.

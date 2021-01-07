@@ -16,7 +16,7 @@ struct game_result {
 class WhacQaMole {
     unsigned char num_holes;
     unsigned short int num_states;
-    unsigned short int current_state;
+    std::atomic<unsigned short int> current_state;
     char** Q; // a 2D array of state-reward history. Rewards/penalties are within the range of -128 to 127
     float gamma;
     char* temp_base3_buf;   // We create these buffers once and for all in the constructor and then reuse them.
@@ -37,7 +37,8 @@ class WhacQaMole {
     bool learn_step();
     void reset();
     unsigned short int get_current_state();
-    void set_current_state(unsigned short int new_state);
+    void set_current_state(unsigned short int new_state); // for simulation and debugging
+    void set_current_state_from_camera(unsigned short int recognized_state); // for deployment
     void serialize(char* dest);
     void deserialize(char* src);
     bool is_initialized();
@@ -45,5 +46,9 @@ class WhacQaMole {
     // bool play(unsigned char max_attempts, short* total_reward, unsigned short* steps_taken);
     bool play(unsigned char max_attempts, struct game_result* res);
 }; 
+
+bool notify_board(unsigned char which_hole);
+void agent_play_main(int num_games);
+extern WhacQaMole* agent;
 
 #endif

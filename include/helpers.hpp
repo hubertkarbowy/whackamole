@@ -35,6 +35,7 @@ class mlogger {
         mlogger& operator<<(const T &v) { // ahh... to hell with body of a C++ template in a .cpp file
             #ifdef COMPILE_FOR_PC
             std::cout << v;
+            std::cout.flush();
             #else
             #ifdef COMPILE_FOR_DUINO
             std::stringstream ss;
