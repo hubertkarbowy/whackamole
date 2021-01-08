@@ -20,9 +20,13 @@ void run_camera() {
     #ifdef COMPILE_FOR_DUINO
         // _D << "Camera scanning for new states...\n";
         sleep_for_noarch(CAMERA_SCAN_INTERVAL);
+        if (TRUE_BOARD_STATE > num_states) continue; // undefined camera state, e.g. 9999
         // _D << "Camera + TF ready \n";
         // set observed board state global variable here just before calling notify
+        //if (OBSERVED_BOARD_STATE != TRUE_BOARD_STATE) {
+        OBSERVED_BOARD_STATE = TRUE_BOARD_STATE;
         notify_single_thread_noarch(CAMERA_THREAD);
+        // }
     #endif
     #endif
     }

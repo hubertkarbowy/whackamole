@@ -26,6 +26,14 @@ extern unsigned short int OBSERVED_BOARD_STATE;
 */
 extern unsigned short int TRUE_BOARD_STATE;
 
+
+#ifdef COMPILE_FOR_DUINO
+extern int good_latch;
+extern int good_clock;
+extern int good_data;
+extern unsigned char good_leds;
+#endif
+
 //
 //
 //

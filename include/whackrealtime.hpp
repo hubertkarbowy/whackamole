@@ -28,11 +28,12 @@
     extern std::condition_variable cv, cv_agent_play, cv_camera;
 #else
 #ifdef COMPILE_FOR_DUINO
-    #define BOARD_WHACKED_FLAG (1UL << 0)
-    #define CAMERA_SCAN_INTERVAL 10
+    #define BOARD_FLAG (1UL << 0)
+    #define AGENT_FLAG (1UL << 1)
+    #define CAMERA_FLAG (1UL << 2)
+    #define CAMERA_SCAN_INTERVAL 250 // quarter of a second
     #include <mbed.h>
-    // extern rtos::Semaphore true_board_semaphore;
-    // extern mbed::Ticker board_ticker;
+    #include <cmsis_os2.h> // event flag definitions
     extern rtos::EventFlags cv_flags;
 #endif
 #endif

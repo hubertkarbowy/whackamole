@@ -17,7 +17,7 @@ class Board {
     private:
     char num_holes;
     char* temp_base3_buf;
-    
+
     public:
     unsigned short int current_state;
     Board(char num_holes) {
@@ -40,6 +40,7 @@ class Board {
         to_base3_buf(current_state, temp_base3_buf, num_holes);
         temp_base3_buf[(unsigned char)which_hole] = 0;
         this->current_state = base3_to_int(temp_base3_buf, num_holes);
+        updateLEDs();
         TRUE_BOARD_STATE=this->current_state;
     }
 
@@ -52,8 +53,33 @@ class Board {
     */
     void permute() {
         this->current_state = random_int_noarch(RND_STATES);
+        to_base3_buf(current_state, temp_base3_buf, num_holes);
         _D << "Board permuted\n";
         TRUE_BOARD_STATE = current_state;
+        updateLEDs();
+    }
+
+    void updateLEDs() {
+#ifdef COMPILE_FOR_DUINO
+        good_leds = 0;
+        for (int i=0; i<NUM_HOLES; i++) {
+            if (temp_base3_buf[i] == 1) {
+                bitClear(good_leds, i);
+                // bitClear(bad_leds, i);
+            }
+            else if (temp_base3_buf[i] == 2) {
+                bitSet(good_leds, i);
+                // bitSet(bad_leds, i);
+            }
+            else {
+                bitSet(good_leds, i);
+                // bitClear(bad_leds, i);
+            }
+        }
+        digitalWrite(good_latch, LOW);
+        shiftOut(good_data, good_clock, LSBFIRST, good_leds);
+        digitalWrite(good_latch, HIGH);
+#endif
     }
 
 } mole_board(NUM_HOLES);

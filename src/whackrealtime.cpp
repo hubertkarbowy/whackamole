@@ -103,6 +103,18 @@ void notify_single_thread_noarch(enum noarch_which_thread thr) {
     }
     #else
     #ifdef COMPILE_FOR_DUINO
+    switch (thr) {
+        case BOARD_THREAD:
+            cv_flags.set(BOARD_FLAG);
+            break;
+        case AGENT_THREAD:
+            cv_flags.set(AGENT_FLAG);
+            break;
+        case CAMERA_THREAD:
+            cv_flags.set(CAMERA_FLAG);
+            break;
+        default: {}
+    }
     #endif
     #endif
 }
@@ -155,6 +167,44 @@ bool wait_on_cv_noarch(enum noarch_which_thread thr, uint32_t timeout_secs, void
     }
     #else
     #ifdef COMPILE_FOR_DUINO
+    switch (thr) {
+        case BOARD_THREAD:
+            if (timeout_secs != 0) {
+                uint32_t status = cv_flags.wait_any(BOARD_FLAG, timeout_secs*1000);
+                if (status == osFlagsError || status == osFlagsErrorTimeout) ret = false;
+                else ret = true;
+            }
+            else {
+                uint32_t status = cv_flags.wait_any(BOARD_FLAG);
+                if (status == osFlagsError || status == osFlagsErrorTimeout) ret = false;
+                else ret = true;
+            }
+            break;
+        case AGENT_THREAD:
+            if (timeout_secs != 0) {
+                uint32_t status = cv_flags.wait_any(AGENT_FLAG, timeout_secs*1000);
+                if (status == osFlagsError || status == osFlagsErrorTimeout) ret = false;
+                else ret = true;
+            }
+            else {
+                uint32_t status = cv_flags.wait_any(AGENT_FLAG);
+                if (status == osFlagsError || status == osFlagsErrorTimeout) ret = false;
+                else ret = true;
+            }
+            break;
+        case CAMERA_THREAD:
+            if (timeout_secs != 0) {
+                uint32_t status = cv_flags.wait_any(CAMERA_FLAG, timeout_secs*1000);
+                if (status == osFlagsError || status == osFlagsErrorTimeout) ret = false;
+                else ret = true;
+            }
+            else {
+                uint32_t status = cv_flags.wait_any(CAMERA_FLAG);
+                if (status == osFlagsError || status == osFlagsErrorTimeout) ret = false;
+                else ret = true;
+            }
+            break;
+        }
     #endif
     #endif
     return ret;
