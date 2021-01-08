@@ -22,6 +22,15 @@ void print_arr(void* rewards, int len, int data_type, bool eol) {
     if (eol) _D << "\n";
 }
 
+void print_game_summary(struct game_result res) {
+    _D << "  SUMMARY:\n    - Total reward: " << to_string(res.total_reward) << "\n";
+    _D << "    - Number of steps: " << to_string(res.steps_taken) << "\n";
+    _D << "    - Evil: " << to_string(res.num_evil_moles);
+    _D << ", Good: " << to_string(res.num_good_moles) << ", Empty: ";
+    _D << to_string(res.num_empty) << "\n";
+    _D << "    - Whacked: " << to_string(res.whacked) << "\n";
+}
+
 string charr_to_str(char* rewards, int len) {
     string ret = "";
     for (int i=0; i<len; i++) {

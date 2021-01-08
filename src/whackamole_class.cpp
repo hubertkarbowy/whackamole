@@ -9,12 +9,9 @@
 #ifdef COMPILE_FOR_PC
 #include <fstream>
 #include <iostream>
-#include <random>
 #endif
 
 using namespace std;
-
-// WhacQaMole* agent = new WhacQaMole(NUM_HOLES, RandomPolicy); // global agent... can we get around this somehow? should we?
 
 WhacQaMole::WhacQaMole(unsigned char num_holes, enum policy POLICY) {
     this->num_holes = num_holes;
@@ -28,15 +25,8 @@ WhacQaMole::WhacQaMole(unsigned char num_holes, enum policy POLICY) {
         total_transitions += num_holes + 1;
     }
     this->gamma = 0.8;
-
-    // this->random_hole_dist = uniform_int_distribution<int>(0, num_holes); // not num_holes+1 because inclusive
-    // std::random_device r;
-    // Randomly initialize the agent's state - this should be irrelevant when connected to TF and camera
-    // this->rand_engine = std::default_random_engine(r());
-    // this->uniform_dist = uniform_int_distribution<unsigned short int>(0, num_states);
-
-    //this->current_state = this->uniform_dist(rand_engine);
-    this->current_state = random_int_noarch(RND_STATES);
+    // this->current_state = random_int_noarch(RND_STATES);
+    this->current_state = 9999;
     
     _D << "Created the game with " << num_states << " states and ";
     _D << total_transitions << " transitions. Initial state is " << this->current_state << "\n";
@@ -62,59 +52,58 @@ WhacQaMole::~WhacQaMole() {
  *
  */
 bool WhacQaMole::learn_step() {
+    wait_on_cv_noarch(CAMERA_THREAD, 0); // wait for the camera to become available
+    current_state = OBSERVED_BOARD_STATE;
     to_base3_buf(current_state, temp_base3_buf, num_holes);
+    _D << "   Received from camera state " << current_state << ", as base3: "; print_arr(this->temp_base3_buf, this->num_holes);
+
     if (is_terminal_state(temp_base3_buf, num_holes)) { // do not perform updates if we detect a terminal state at the outset
+        _D << "   This is the final state.\n";
         return true;
     }
 
     all_transitions_and_rewards(this->current_state, this->temp_transitions,
                                 this->temp_transition_rewards, this->temp_base3_buf,
                                 this->num_holes);
-    _D << "Current state is " << current_state << ", as base3: ";
-    print_arr(this->temp_base3_buf, this->num_holes);
-    _D << "Next states: ";
-    print_arr(this->temp_transitions, this->num_holes+1, UINT_ARR);
+    _D << "   Next states: "; print_arr(this->temp_transitions, this->num_holes+1, UINT_ARR);
     // _D << "Next rewards:\n";
     // print_arr(this->temp_transition_rewards, this->num_holes+1);
     if (this->POLICY == RandomPolicy) {
-        // int hole_to_hit = rand() % (num_holes + 1);
-        unsigned short int prev_state = current_state;
-        // int hole_to_hit = this->random_hole_dist(rand_engine);
+        unsigned short int next_state_agent_thinks = current_state;
         int hole_to_hit = random_int_noarch(RND_HOLES);
         char transition_reward = temp_transition_rewards[hole_to_hit];
-        _D << "Will hit hole " << hole_to_hit << " with a transition reward of " << to_string(transition_reward);
-        _D << ". Next state is " << temp_transitions[hole_to_hit];
-        // _D << " with a reward of " << to_string(temp_transition_rewards[hole_to_hit]) << "\n";
-        current_state = temp_transitions[hole_to_hit];
-        to_base3_buf(current_state, temp_base3_buf, num_holes);
-        all_transitions_and_rewards(this->current_state, this->temp_transitions,
+        _D << "   Will hit hole " << hole_to_hit << " with a transition reward of " << to_string(transition_reward);
+        _D << ". Agent thinks next state will be " << temp_transitions[hole_to_hit];
+        next_state_agent_thinks = temp_transitions[hole_to_hit];
+        to_base3_buf(next_state_agent_thinks, temp_base3_buf, num_holes);
+        all_transitions_and_rewards(next_state_agent_thinks, this->temp_transitions,
                                     this->temp_transition_rewards, this->temp_base3_buf,
                                     this->num_holes);
-        char selected_max = max_charr(this->Q[current_state], this->num_holes+1);
+        char selected_max = max_charr(this->Q[next_state_agent_thinks], this->num_holes+1);
         _D << " and known Q-rewards from there are: ";
-        print_arr(this->Q[current_state], this->num_holes+1);
-        _D << "Therefore, the selected max is " << to_string(selected_max) << "\n";
+        print_arr(this->Q[next_state_agent_thinks], this->num_holes+1);
+        _D << "   Therefore, the selected max is " << to_string(selected_max) << "\n";
         char updated_q = fmax(SCHAR_MIN, fmin(SCHAR_MAX, (char)round(transition_reward + (gamma*selected_max))));
-        _D << "Q(" << prev_state << ", " << current_state << ") = " << to_string(transition_reward) << " + " << gamma << "*" << to_string(selected_max) << " = " << to_string(updated_q) << "\n";
-        Q[prev_state][hole_to_hit] = updated_q;
+        _D << "   Q(" << current_state<< ", " << next_state_agent_thinks << ") = " << to_string(transition_reward) << " + " << gamma << "*" << to_string(selected_max) << " = " << to_string(updated_q) << "\n";
+        Q[current_state][hole_to_hit] = updated_q;
+        notify_board(hole_to_hit);
     }
     else {
         _D << "Unknown policy!\n";
         exit(-1);
     }
-   
-    return is_terminal_state(temp_base3_buf, num_holes);
+    // return is_terminal_state(temp_base3_buf, num_holes);
+    return false;
 }
 
 /** Set a new state randomly.
  *
- * At learning time used to switch between episodes.
+ * This function should generally not be used.
  */
 void WhacQaMole::reset() {
-    // this->current_state = this->uniform_dist(rand_engine);
     this->current_state = random_int_noarch(RND_STATES);
     to_base3_buf(current_state, temp_base3_buf, num_holes);
-    _D << "Agent's state reset to " << to_string(current_state) << " (base3: ";
+    _D << "[DEPRECATED] Agent's state reset to " << to_string(current_state) << " (base3: ";
     print_arr(temp_base3_buf, num_holes, CHAR_ARR, false);
     _D << ")\n";
 }
@@ -135,7 +124,6 @@ unsigned short int WhacQaMole::get_current_state() {
  * TODO: ensure state is accessed atomically
  */
 void WhacQaMole::set_current_state(unsigned short int new_state) {
-    // this->is_hitting = true;
     this->current_state = new_state;
 }
 
@@ -234,58 +222,45 @@ bool WhacQaMole::play(unsigned char max_attempts, struct game_result* res) {
     unsigned char _good_moles = 0;
     unsigned char _empty_holes = 0;
     bool ret = false;
-    to_base3_buf(current_state, temp_base3_buf, num_holes);
-    _D << "   *** Playing from state " << to_string(current_state) << ", as base3: ";
-    print_arr(this->temp_base3_buf, this->num_holes, CHAR_ARR, false);
-    _D << ", rewards: ";
-    print_arr(this->Q[current_state], this->num_holes+1, CHAR_ARR);
+    wait_on_cv_noarch(CAMERA_THREAD, 0); // wait for the camera to become available
+    current_state = 9999; // undefined state at initialization
     unsigned char i = max_attempts;
+    _D << "************ NEW GAME  (max " << std::to_string(max_attempts) << " attempts) ***********\n";
     while (i>0) {
+        wait_on_cv_noarch(CAMERA_THREAD, 0);
+        _D << "   OK, received data from camera\n";
+        current_state = OBSERVED_BOARD_STATE;
+        to_base3_buf(current_state, temp_base3_buf, num_holes);
+        _D << "   Observed state is " << to_string(current_state) << ", as base3: ";
+        print_arr(this->temp_base3_buf, this->num_holes, CHAR_ARR, false);
+        _D << ", rewards: ";
+        print_arr(this->Q[current_state], this->num_holes+1, CHAR_ARR);
         if (is_terminal_state(temp_base3_buf, num_holes)) {
             ret = true;
             break;
         }
         char val = SCHAR_MIN;
         char idx = -1;
-        // unsigned short int next_state = current_state;
         argmax_charr(Q[current_state], num_holes+1, &val, &idx);
-        _D << "  I= " << to_string(i) << " DECISION: ";
+        _D << "   I= " << to_string(i) << " DECISION: ";
         if (idx != -1) {
             if (idx != num_holes) {
                 _D << "Hitting hole " << to_string(idx) << " with a reward of " << to_string(val) << ".\n";
-                // FIXME: move score keeping to board
                 switch (temp_base3_buf[(unsigned char)idx]) {
                     case 0: _empty_holes++; break;
                     case 1: _good_moles++; break;
                     case 2: _evil_moles++; break;
                 }
-                #ifdef COMPILE_FOR_PC
-                temp_base3_buf[(unsigned char)idx] = 0; // remove anything in a hole
-                // unsigned short int next_state = base3_to_int(temp_base3_buf, num_holes);
-                OBSERVED_BOARD_STATE = base3_to_int(temp_base3_buf, num_holes);
-                notify_single_thread_noarch(CAMERA_THREAD); // notify only for PC, this is a "fake camera" !!!
-                wait_on_cv_noarch(CAMERA_THREAD, 0);
-                _D << "OK, pretending to have received data from camera\n";
-                #endif
             }
             else {
                 _D << "No hit.\n";
             }
         }
         else { _D << "Oops, something looks broken.\n"; }
-        // to_base3_buf(next_state, temp_base3_buf, num_holes);
-        to_base3_buf(OBSERVED_BOARD_STATE, temp_base3_buf, num_holes);
-        _D << "  I= " << to_string(i) << " NEXT STATE: " << to_string(OBSERVED_BOARD_STATE) << ", as base3: ";
-        print_arr(temp_base3_buf, num_holes, CHAR_ARR, false);
-        _D << ", rewards: ";
-        print_arr(this->Q[OBSERVED_BOARD_STATE], this->num_holes+1, CHAR_ARR);
-        // this->current_state = next_state;
-        this->current_state = OBSERVED_BOARD_STATE;
         _reward += val;
         _steps++;
         i--;
-        notify_board(idx);
-        sleep_for_noarch(SIMULATION_WHACK_INTERVAL_MILLIS);
+        notify_board(idx); // wait for response only indirectly (through camera) - this is just a "whack" signal to the board to respond
     }
     if (res != nullptr) {
         res->total_reward = _reward;
@@ -298,75 +273,8 @@ bool WhacQaMole::play(unsigned char max_attempts, struct game_result* res) {
 }
 
 bool notify_board(unsigned char which_hole) {
-#ifdef COMPILE_FOR_PC
-    std::unique_lock<std::mutex> lck(true_board_mutex);
     agent_whacked_hole.store(which_hole);
     is_whacked.store(true);
-    cv.notify_all();
-    lck.unlock();
-#endif
+    notify_single_thread_noarch(BOARD_THREAD);
     return true;
-}
-
-/**
- * Runs agent thread in PLAY mode (requires a pretrained Q-matrix)
- *
- * The agent's play function will be executed ONCE each time a notification from the camera/TF is received by this thread.
- *
- * @param num_games     The maximum number of episodes (games) before the thread exists or -1 if it should stay alive forever
- *
- */
-void agent_play_main(int num_games=-1) {
-    if (!agent->is_initialized()) {
-        _D << "The agent has not been initialized. Please restore its Q matrix before playing.\n";
-        return;
-    }
-    int cnt = num_games == -1 ? 1 : num_games;
-    while (cnt > 0) {
-        wait_on_cv_noarch(AGENT_THREAD, 0);
-        _D << "=================== GAME " << cnt << " ========================\n";
-        struct game_result res = {0, 0, 0, 0, 0};
-        bool whacked = agent->play(MAX_HIT_ATTEMPTS, &res);
-        _D << "  SUMMARY:\n    - Total reward: " << to_string(res.total_reward) << "\n";
-        _D << "    - Number of steps: " << to_string(res.steps_taken) << "\n";
-        _D << "    - Evil: " << to_string(res.num_evil_moles);
-        _D << ", Good: " << to_string(res.num_good_moles) << ", Empty: ";
-        _D << to_string(res.num_empty) << "\n";
-        _D << "    - Whacked: " << to_string(whacked) << "\n";
-        if (num_games != -1) cnt--;
-        notify_single_thread_noarch(AGENT_THREAD);
-    }
-    _D << "Agent finished playing, exiting thread.\n";
-}
-
-
-/**
- * Runs agent thread in TRAINING mode
- *
- * The agent's play function will be executed ONCE each time a notification from the camera/TF is received by this thread.
- *
- * @param num_games     The maximum number of episodes (games) before the thread exists or -1 if it should stay alive forever
- *
- */
-void agent_train_main(int num_episodes) {
-    if (!agent->is_initialized()) {
-        _D << "The agent has not been initialized. Please restore its Q matrix before playing.\n";
-        return;
-    }
-    int cnt = num_games == -1 ? 1 : num_games;
-    while (cnt > 0) {
-        wait_on_cv_noarch(AGENT_THREAD, 0);
-        _D << "=================== GAME " << cnt << " ========================\n";
-        struct game_result res = {0, 0, 0, 0, 0};
-        bool whacked = agent->play(MAX_HIT_ATTEMPTS, &res);
-        _D << "  SUMMARY:\n    - Total reward: " << to_string(res.total_reward) << "\n";
-        _D << "    - Number of steps: " << to_string(res.steps_taken) << "\n";
-        _D << "    - Evil: " << to_string(res.num_evil_moles);
-        _D << ", Good: " << to_string(res.num_good_moles) << ", Empty: ";
-        _D << to_string(res.num_empty) << "\n";
-        _D << "    - Whacked: " << to_string(whacked) << "\n";
-        if (num_games != -1) cnt--;
-        notify_single_thread_noarch(AGENT_THREAD);
-    }
-    _D << "Agent finished playing, exiting thread.\n";
 }

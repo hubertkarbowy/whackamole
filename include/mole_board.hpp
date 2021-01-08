@@ -10,4 +10,3 @@
 #endif
 
 void board_main();
-// bool board_try_lock_for(int secs);

@@ -1,5 +1,7 @@
 #include <whackrealtime.hpp>
 
+   unsigned short int TRUE_BOARD_STATE=9999;
+   unsigned short int OBSERVED_BOARD_STATE=9999;
    std::atomic<unsigned char> agent_whacked_hole(NUM_HOLES-1); // nothing whacked by default
    std::atomic<bool> supporting_threads_active(true);
 #ifdef COMPILE_FOR_PC
@@ -14,8 +16,6 @@
     } whackamole_generators_cpp;
 #else
 #ifdef COMPILE_FOR_DUINO
-    // rtos::Semaphore true_board_semaphore(1); // binary semaphore will behave just like a mutex (yes, I know it isn't a mutex)
-    // mbed::Ticker board_ticker;
     rtos::EventFlags cv_flags("WHACKAMOLE_FLAGS");
     struct whackamole_generators_duino {
         unsigned char num_holes;

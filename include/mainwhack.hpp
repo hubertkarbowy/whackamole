@@ -5,7 +5,7 @@
 #define MISS -10
 #define IDLE_BUT_WRONG -10
 #define PENALTY -50
-#define REWARD 15 // moze byc zbyt mala rozdzielczosc dla typu char
+#define REWARD 15 // using the 8-bit char type as reward range can be quite a drawback, since the values are only between -128 and 127 (and integer), but keeps our Q-matrix small enough
 #define BOARD_TICKER_INTERVAL 3
 #define SIMULATION_WHACK_INTERVAL_MILLIS 1000
 #define MAX_HIT_ATTEMPTS 10

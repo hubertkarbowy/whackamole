@@ -11,10 +11,13 @@
 // setting from an ISR context. Condition variables -
 // unfortunately - cannot be accessed from an ISR.
 
+    extern unsigned short int TRUE_BOARD_STATE;
+    extern unsigned short int OBSERVED_BOARD_STATE;
     extern std::atomic<bool> is_whacked;
     extern std::atomic<unsigned char> agent_whacked_hole;
     extern std::atomic<bool> supporting_threads_active;
 #ifdef COMPILE_FOR_PC
+    #define CAMERA_SCAN_INTERVAL 1
     #include <random>
     #include <thread>
     #include <mutex>
@@ -26,6 +29,7 @@
 #else
 #ifdef COMPILE_FOR_DUINO
     #define BOARD_WHACKED_FLAG (1UL << 0)
+    #define CAMERA_SCAN_INTERVAL 10
     #include <mbed.h>
     // extern rtos::Semaphore true_board_semaphore;
     // extern mbed::Ticker board_ticker;

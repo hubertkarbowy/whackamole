@@ -70,10 +70,8 @@ int main(int argc, char** argv) {
     // ======== SET UP THE AGENT AND OPTIONALLY DESERIALIZE PRETRAINED Q-MATRIX =====
     setup_rtos_primitives(num_holes); // very important!
     agent = new WhacQaMole(num_holes, RandomPolicy); // in the setup() function on mbed os
-    // WhacQaMole* game = new WhacQaMole(num_holes, RandomPolicy);
     if (ser_op == deserialize) {
         _D << "Attempting to deserialize from " << fname << "\n";
-        // game->deserialize(fname);
         agent->deserialize(fname);
     }
 
@@ -87,11 +85,13 @@ int main(int argc, char** argv) {
         for (int i=0; i<num_episodes; i++) {
             _D << "=================== EPISODE " << i << " ========================\n";
             int step = 0;
-            while (agent->learn_step() == false) {
+            while (true) {
                 _D << "    ***** STEP " << step << " *****\n";
+                bool is_final = agent->learn_step();
+                if (is_final) break;
                 step++;
             }
-            agent->reset();
+            notify_single_thread_noarch(BOARD_THREAD);
         }
         agent->set_initialized(true);
     }
@@ -100,15 +100,12 @@ int main(int argc, char** argv) {
             _D << "Please deserialize the Q matrix before playing.\n";
             exit(-2);
         }
-        std::thread agent_thread(agent_play_main, num_episodes);
         for (int i=0; i<num_episodes; i++) { // loop forever on arduino?
-            sleep_for_noarch(1500); // simulates the time it takes the camera and TF module to process image
-            notify_single_thread_noarch(AGENT_THREAD);
-            wait_on_cv_noarch(AGENT_THREAD, 0);
-            agent->reset();
+            struct game_result res = {0, 0, 0, 0, 0};
+            agent->play(10, &res);
+            print_game_summary(res);
+            notify_single_thread_noarch(BOARD_THREAD);
         }
-        agent_thread.join();
-        supporting_threads_active = false;
     }
 
     if (ser_op == serialize) {
@@ -118,8 +115,8 @@ int main(int argc, char** argv) {
         }
         agent->serialize(fname);
     }
-    for (auto& t : supporting_threads) t.join();
-    // camera_thread.join();
-    // mole_board.join();
+
+    supporting_threads_active = false;
+    for (auto& t : supporting_threads) t.join(); // camera_thread.join(); mole_board.join();
 }
 #endif

@@ -16,91 +16,49 @@ std::atomic<bool> is_whacked(false);
 class Board {
     private:
     char num_holes;
+    char* temp_base3_buf;
     
     public:
     unsigned short int current_state;
     Board(char num_holes) {
+        this->temp_base3_buf = new char[num_holes];
         this->num_holes = num_holes;
     }
 
     /**
      * Whack
+     *
+     * Whacks the board - removes anything (good, evil or void) from which_hole and updates
+     * the board's internal state. This function also copies the updated board state to
+     * a global variable TRUE_BOARD_STATE which is normally needed only for simulation.
+     * When compiled on PC (simulation), the fake camera will then "observe" changes in that global
+     * variable instead of the actual image.
+     *
     */
     void whack(char which_hole) {    
         _D << "Whacking hole " << std::to_string(which_hole) << "\n";
-    // #ifdef COMPILE_FOR_DUINO
-    //     bool acquired = true_board_semaphore.try_acquire();
-    //     if (acquired) {
-    //     }
-    //     else {
-    //        _D << "Hit while board was changing - not processing this one due to ambiguity\n";
-    //     }
-    // #endif
+        to_base3_buf(current_state, temp_base3_buf, num_holes);
+        temp_base3_buf[(unsigned char)which_hole] = 0;
+        this->current_state = base3_to_int(temp_base3_buf, num_holes);
+        TRUE_BOARD_STATE=this->current_state;
     }
 
+    /**
+     * Reset the board
+     *
+     * This function is triggered by the board's main thread on two events (see @board_main):
+     * 1) Manual reset was requested - when the agent has reached the final state
+     * 2) A timer has elapsed
+    */
     void permute() {
         this->current_state = random_int_noarch(RND_STATES);
         _D << "Board permuted\n";
+        TRUE_BOARD_STATE = current_state;
     }
 
 } mole_board(NUM_HOLES);
 
-/**
- * Change the board when the ticker elapses.
- *
- * This function will prevent the tick from completing if a hammer is hitting the hole at the same time
- *
- */
-
-// void isr_ticker_board_change() {
-//     #ifdef COMPILE_FOR_PC
-// 
-//     #else
-//     #ifdef COMPILE_FOR_DUINO
-//     bool acquired = true_board_semaphore.try_acquire();
-//     if (acquired) {
-//         board_ticker.detach(); // stop ticking
-//         mole_board.permute();
-//         board_ticker.attach(&isr_ticker_board_change, BOARD_TICKER_INTERVAL);
-//         true_board_semaphore.release();
-//     }
-//     // do nothing otherwise - just let the ticker move on to the next cycle
-//     #endif
-//     #endif
-// }
-
-void _board_lock_unconditionally() {
-    #ifdef COMPILE_FOR_PC
-       // std::unique_lock<std::mutex> lck(true_board_mutex); // initialization - TODO: RAII
-    #else
-    #ifdef COMPILE_FOR_DUINO
-       // true_board_semaphore.acquire();
-    #endif
-    #endif
-}
-
-// bool board_lock_try_lock_for(int secs) { // todo: refactor - this code repeats itself in other classes
-//     #ifdef COMPILE_FOR_PC
-//     std::unique_lock<std::mutex> lck(true_board_mutex);
-//     std::cv_status status = cv.wait_for(lck, std::chrono::seconds(secs)); // seconds
-//     if (status == std::cv_status::timeout) {
-//         return false;
-//     }
-//     else return true;
-//     // return true_board_mutex.try_lock_for(std::chrono::seconds(secs)); // seconds
-//     #else
-//     #ifdef COMPILE_FOR_DUINO
-//     uint32_t ret = cv_flags.wait_any(BOARD_WHACKED_FLAG, (uint32_t)1000*secs, true);
-//     _D << "Got " << std::to_string(ret) << "\n";
-//     // printf("Got: 0x%08lx\r\n", flags_read);    
-//     // return true_board_semaphore.try_acquire_for(1000*secs); // miliseconds
-//     return false;
-//     #endif
-//     #endif
-// }
-
 void board_main() {
-    // _board_lock_unconditionally();
     _D << "INIT board - lock successful\n";
     while (supporting_threads_active) {
         // bool released = board_lock_try_lock_for(BOARD_TICKER_INTERVAL);
@@ -111,12 +69,15 @@ void board_main() {
         }
         else {
             if (is_whacked.load()) {
+                mole_board.whack(agent_whacked_hole);
                 _D << "Board was just whacked on hole " << std::to_string(agent_whacked_hole.load()) << " and went to state " << mole_board.current_state << ".";
                 _D << " Resetting the timer.\n";
                 is_whacked.store(false);
             }
             else {
-                _D << "Spurious wakeup?! We probably shouldn't see this...\n";
+                _D << "Attempting a forced reset... ";
+                mole_board.permute();
+                _D << "Done, board was manually reset to next state " << mole_board.current_state << "\n";
             }
         }
     }
