@@ -9,6 +9,10 @@ extern int good_latch;
 extern int good_clock;
 extern int good_data;
 extern unsigned char good_leds;
+extern int bad_latch;
+extern int bad_clock;
+extern int bad_data;
+extern unsigned char bad_leds;
 #endif
 #endif
 

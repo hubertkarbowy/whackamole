@@ -21,7 +21,11 @@ int num_episodes = 10;
 int good_latch = 5;
 int good_clock = 6;
 int good_data = 4;
+int bad_data = 7;
+int bad_latch = 8;
+int bad_clock = 9;
 unsigned char good_leds = 0;
+unsigned char bad_leds = 0;
 
 void setup() {
   // initialize digital pin LED_BUILTIN as an output.
@@ -31,6 +35,9 @@ void setup() {
   pinMode(good_latch, OUTPUT);
   pinMode(good_clock, OUTPUT);
   pinMode(good_data, OUTPUT);
+  pinMode(bad_latch, OUTPUT);
+  pinMode(bad_clock, OUTPUT);
+  pinMode(bad_data, OUTPUT);
   // true_board_semaphore.acquire();
 }
 

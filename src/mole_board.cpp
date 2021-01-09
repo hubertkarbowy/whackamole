@@ -62,23 +62,29 @@ class Board {
     void updateLEDs() {
 #ifdef COMPILE_FOR_DUINO
         good_leds = 0;
+        bad_leds = 0;
         for (int i=0; i<NUM_HOLES; i++) {
             if (temp_base3_buf[i] == 1) {
                 bitClear(good_leds, i);
-                // bitClear(bad_leds, i);
+                bitSet(bad_leds, i);
             }
             else if (temp_base3_buf[i] == 2) {
                 bitSet(good_leds, i);
-                // bitSet(bad_leds, i);
+                bitClear(bad_leds, i);
             }
             else {
                 bitSet(good_leds, i);
-                // bitClear(bad_leds, i);
+                bitSet(bad_leds, i);
             }
         }
         digitalWrite(good_latch, LOW);
         shiftOut(good_data, good_clock, LSBFIRST, good_leds);
         digitalWrite(good_latch, HIGH);
+
+        digitalWrite(bad_latch, LOW);
+        shiftOut(bad_data, bad_clock, LSBFIRST, bad_leds);
+        digitalWrite(bad_latch, HIGH);
+
 #endif
     }
 
