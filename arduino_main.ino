@@ -18,12 +18,12 @@ WhacQaMole* agent = nullptr;
 int num_episodes = 10;
 
 // first shift register for "good" moles:
-int good_latch = 5;
-int good_clock = 6;
-int good_data = 4;
-int bad_data = 7;
-int bad_latch = 8;
-int bad_clock = 9;
+int good_latch = 11;
+int good_clock = 13;
+int good_data = 12;
+int bad_data = A7;
+int bad_latch = A6;
+int bad_clock = A3;
 unsigned char good_leds = 0;
 unsigned char bad_leds = 0;
 
