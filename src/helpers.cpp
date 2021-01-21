@@ -3,6 +3,10 @@
 
 using namespace std;
 
+/**
+ * Prints an array of chars or unsigned ints
+ *
+ */
 void print_arr(void* rewards, int len, int data_type, bool eol) {
     for (int i=0; i<len; i++) {
         switch (data_type) {
@@ -22,6 +26,12 @@ void print_arr(void* rewards, int len, int data_type, bool eol) {
     if (eol) _D << "\n";
 }
 
+/**
+ * Prints the game summary.
+ *
+ * Prints: total reward, number of steps, number of whacked holes recognized as good, evil or empty.
+ * @param[in] res           A struct of the type #game_result holding the game results
+ */
 void print_game_summary(struct game_result res) {
     _D << "  SUMMARY:\n    - Total reward: " << to_string(res.total_reward) << "\n";
     _D << "    - Number of steps: " << to_string(res.steps_taken) << "\n";
@@ -49,6 +59,16 @@ string intarr_to_str(unsigned short int* rewards, int len) {
 
 // note 1: state_as_base3_buf has to be allocated
 // note 2: state_as_base3_buf will hold the number in least-significant-digit first order
+/**
+ * Converts a single-number representation of a board state to an array of chars
+ *
+ * Example: state = 6000, num_holes = 8, state_as_base3_buf will then be "02002022" because
+ * 6000(dec) is 22020020(base3) and our convention is to put the most significant digit first.
+ *
+ * @param[in] state         A number in the range of 0 - 3^num_holes
+ * @param[out] state_as_base3_buf    Buffer of length num_holes where the result will be written. This buffer has to be pre-allocated.
+ * @param[out] num_holes    The number of holes on the board
+ */
 void to_base3_buf(unsigned short int state, char* state_as_base3_buf, int num_holes) {
     char rem = 0;
     unsigned char cnt = 0;

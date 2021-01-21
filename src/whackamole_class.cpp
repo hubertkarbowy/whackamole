@@ -13,6 +13,18 @@
 
 using namespace std;
 
+/** The agent
+ *
+ * The agent can:
+ *
+ * 1. Determine its current state from the camera output via the @OBSERVED_BOARD_STATE global variable
+ * 2. Operate in the learning mode. In this mode it waits for the camera as described above
+ *    and upon receiving data, performs one step of Q-learning.
+ * 3. Operate in the playing mode. On each camera change it whacks the board on the hole that
+ *    the Q matrix says is the next most probable state.
+ * 4. Serialize and deserialize the Q matrix (PC only)
+ * 5. Notify the board after it has hit a hole (this should normally be detected by the board)
+ */
 WhacQaMole::WhacQaMole(unsigned char num_holes, enum policy POLICY) {
     this->num_holes = num_holes;
     num_states = 1;
