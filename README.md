@@ -1,7 +1,7 @@
 ## Whack-a-mole with Q-learning on Arduino BLE 33 Sense [WIP]
 
 ### 0. Overview
-This is an implementation of a classic [Whack-a-mole](https://en.wikipedia.org/wiki/Whac-A-Mole)  game with some twists. The objective is to build a simple robot (well, that's too much said) which can learn to play this game without being tols explicitly what the rules are. Even though the project was designed to run with Arduino BLE 33 Sense, there is also a command-line version that runs on a PC with a simulated camera.
+This is an implementation of a classic [Whack-a-mole](https://en.wikipedia.org/wiki/Whac-A-Mole)  game with some twists. The objective is to build a simple robot (well, that's too much said) which can learn to play this game without being told explicitly what the rules are. Even though the project was designed to run with Arduino BLE 33 Sense with a camera, there is also a command-line simulator that runs on a PC.
 
 In my implementation, the robot is the **agent**. It has a camera that constatly observes changes on the board (the **environment**). Depending on what it can see on the board, it decides which hole to hit (choose the next **state**).
 #### The game and its modifications
@@ -42,16 +42,18 @@ You can modify the default values for rewards and penalties by changing the foll
 * `MISS` - penalty for hitting an empty hole (default: `-10`)
 * `IDLE_BUT_WRONG` - penalty for not hitting any hole (default: `-10`)
 
-#### 2. Requirements
+
+### 2. Requirements
 * **for PC simulator** - there are no dependencies, so any standard compiler which understands C++11 code should work. The only external library you may need is cppunit, but only if you want to run unit tests. 
 
 * **for Arduino** - please install the board development kit for BLE 33 Sense in the IDE as explained [here](https://www.arduino.cc/en/Guide/NANO33BLESense).
 
-#### 3. Building
+
+### 3. Building
 
 Platform-dependent code is wrapped around the `#ifdef COMPILE_FOR_PC` ... `#endif` and  `#ifdef COMPILE_FOR_DUINO` ... `#endif` directives.
 
-##### Configuration
+#### Configuration
 The file [include/mainwhack.hpp](include/mainwhack.hpp) contains some useful constants you may want to experiment with:
 
 * `NUM_HOLES` - well, the number of holes. Please note that the Arduino code is written for 16 LEDs in total and needs two shift registers. If you want to increase the number of holes, you will need more shift registers too.
@@ -62,10 +64,10 @@ In [include/whackrealtime.hpp](include/whackrealtime.hpp) there is also:
 
 * `CAMERA_SCAN_INTERVAL` - number of milliseconds between camera captures. This is set to 1 on the simulator and can probably be 250 for many ArduCAM compatible devices. If you use OV7670 module with just bit-banging (no ArduCAM), you can forget about anything under 3000 to work properly.
 
-##### For PC (simulator)
+#### For PC (simulator)
 Just run `make` - this will build the executable in `bin/whack`.
 
-##### For Arduino
+#### For Arduino
 We don't use the ARM gcc directly, but rather rely on the preconfigured compilation tools available in Arduino IDE. You will need to find a path to your installation and set the `ARDUINO_HOME` environment variable to point there. Just make sure you have a file called `arduino-builer` in that directory. On my Linux I do it like this:
 
 	export ARDUINO_HOME=/wymiana/optified2/arduino-1.8.13-linux64/arduino-1.8.13/
@@ -80,7 +82,7 @@ Once these two adjustments are done, simply run `make duino` in the console. To 
 	Now you can flash the binary to your board using this command:
 	sudo /home/hubert/.arduino15/packages/arduino/tools/bossac/1.9.1-arduino2/bossac -d --port=ttyACM0 -U -i -a -w ./duino_tmp/arduino_main.ino.bin -R
 
-##### Running unit tests
+#### Running unit tests
 
 Make sure your GCC compiler sees the `cppunit` headers in your system, then run `make test`.
 
@@ -142,9 +144,64 @@ After the training completes, you should see something like that:
 	Exiting board thread (2b)
 
 (1) - The Q-matrix is serialized to this file. At the same time the AGENT thread set the global variable `supporting_threads_active` to `false`.
+
 (2a+2b) Both the CAMERA and the BOARD threads run in a while loop until `supporting_threads_active` is `true`, so they can now safely destroy their resources, stop executing and join the main thread.
 
-* playing
+##### Playing
 
+The following invocation restores the agent with a pretrained Q-matrix from `kret50k.bin`. The agent then plays five games.
 
-####5. Todo
+	$ ./whack --play --num-episodes 5 --deserialize ./kret50k.bin
+
+	Running the simulator with the number of holes set to 8
+	Created the game with 6561 states and 59049 transitions. Initial state is 9999
+	Attempting to deserialize from ./kret50k.bin
+	Restored the game with 8 holes and 6561 states
+	INIT board - lock successful
+	Board permuted
+	Board cycling to the next state 1872        (1)
+	************ NEW GAME  (max 10 attempts) ***********
+	   OK, received data from camera             (2)
+	   Observed state is 1872, as base3: 0*0*1*0*2*1*2*0*, rewards: 12*12*-28*12*27*-28*27*12*12*
+	   I= 10 DECISION: Hitting hole 4 with a reward of 27.          (3)
+	Whacking hole 4            (4)
+	Board was just whacked on hole 4 and went to state 1710. Resetting the timer.        (5)
+	   OK, received data from camera       (2)
+	   Observed state is 1710, as base3: 0*0*1*0*0*1*2*0*, rewards: 2*2*-38*2*2*-38*15*2*2*     (3)
+	   I= 9 DECISION: Hitting hole 6 with a reward of 15.       (4)
+	Whacking hole 6            (4)
+	Board was just whacked on hole 6 and went to state 252. Resetting the timer.       (5)
+	   OK, received data from camera       (2)
+	   Observed state is 252, as base3: 0*0*1*0*0*1*0*0*, rewards: 0*0*0*0*0*0*0*0*0*      (3)
+	  SUMMARY:         (6)
+	    - Total reward: 42
+	    - Number of steps: 2
+	    - Evil: 2, Good: 0, Empty: 0
+	    - Whacked: 0
+	Attempting a forced reset... Board permuted           (7a)
+	Done, board was manually reset to next state 5885       (7b)
+	************ NEW GAME  (max 10 attempts) ***********
+	   OK, received data from camera
+	....
+
+(1) After 3 seconds of inactivity, the BOARD thread reaches a timeout on a conditional variable and cycles to a new random state.
+
+(2) The CAMERA thread discovers that there is a new hole/mole configuration on the board and notifies the AGENT thread.
+
+(3) The agent looks up the rewards associated with all legal transitions from the current state in its Q-matrix. On the first whack seen here it turns out that the state reachable from 1872 with the highest reward of 27 points is 1710. To reach 1710 (02100100 in unreversed base-3) from 1872 (02120100 in base3) the agent needs to whack the fourth hole which - as expected - happens to have an evil mole inside. 
+
+(4) The AGENT writes the number of the whacked hole into an ugly global variable and notifies the BOARD. In a more realistic scenario involving a proper hammer, there would be no such global variable - the board would have to respond (or not, since it can also be faulty) to a mechanical trigger by hiding a creature that was actually hit.
+
+(5) The BOARD thread registers a whack and changes its state accordingly. In the real-time scenario we need to ensure as much as we can that by the time the hammer hits the board, the board has NOT cycled to a new random state due to inactivity timeout.
+
+(6) When the agent detects that it has reached a terminal state (empty board or board containing only good moles), it stops playing and prints the summary.
+
+(7a+7b) For convenience, we have also provided methods that can reset the board on demand immediately after the agent detects there is nothing else to do. The system will work very well without them, you will just need to wait those 3 seconds after each game for the board to change its state due to inactivity.
+
+#### 5. Todo
+
+* Proper camera handling on Arduino - I made some initial experiments (not committed in this repo) with the OV7670 camera, but it seems there is no way to get a framerate faster than ~0.5fps without ArduCAM.
+
+* TF Lite - once the camera works, it would be nice to train an image recognition classifier which will identify moles. No fancy ConvNets are necessary - with just green and amber LEDs on a solid background even plain logistic regression will work with near 100% accuracy.
+
+* Deep Q-Learning - currently we have 6560 states and for each state the Q-matrix must hold rewards for 9 possible actions (eight holes plus inactivity) from that state. Even with our very modest current allowance of one byte per transition, which limits the rewards to a range between -128 and 127, this consumes 59040 bytes. Estimating rewards using Deep Q-Learning rather than looking them up in a precomputed array should require much less space.
