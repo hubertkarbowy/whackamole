@@ -90,10 +90,18 @@ class Board {
 
 } mole_board(NUM_HOLES);
 
+/**
+ * Main board thread
+ *
+ * Listens for board whacks and controls what shows up in the holes. It can change the board
+ * on two events:
+ *
+ * 1. A timer has elapsed (we use a conditional variable on PC and an EventsFlag on Arduino)
+ * 2. The agent whacks the board (= notifies the conditional variable / sets an EventFlag)
+ */
 void board_main() {
     _D << "INIT board - lock successful\n";
     while (supporting_threads_active) {
-        // bool released = board_lock_try_lock_for(BOARD_TICKER_INTERVAL);
         bool released = wait_on_cv_noarch(BOARD_THREAD, BOARD_TICKER_INTERVAL);
         if (!released) {
             mole_board.permute();

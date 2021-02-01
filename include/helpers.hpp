@@ -28,15 +28,23 @@ unsigned short int base3_to_int(char* base3_buf, int num_holes);
 char max_charr(char* arr, int len);
 void argmax_charr(char* arr, int len, char* val, char* idx);
 
+/**
+ * Keeps results of a single game
+ */
 struct game_result {
-    short total_reward;
-    unsigned char steps_taken;
-    unsigned char num_evil_moles;
-    unsigned char num_good_moles;
-    unsigned char num_empty;
-    bool whacked;
+    short total_reward; /*!< Total reward as computed from the Q matrix */
+    unsigned char steps_taken; /*!< Number of steps taken by the agent before arriving at the terminal state */
+    unsigned char num_evil_moles; /*!< Number of evil moles hit during the game */
+    unsigned char num_good_moles; /*!< Number of good moles hit during the game */
+    unsigned char num_empty; /*!< Number of empty holes hit during the game */
+    bool whacked; /*!< Whether the game finished in a terminal state or not */
 };
 
+/**
+ * Simple logger class
+ *
+ * Works for both PC (cout) and Arduino (Serial.write)
+ */
 class mlogger {
     public:
         mlogger() {}

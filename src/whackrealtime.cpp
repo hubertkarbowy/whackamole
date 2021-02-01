@@ -1,3 +1,9 @@
+/**
+ * @file whackrealtime.cpp
+ * @brief Real-time primitives for PC and for Arduino
+ *
+ * This file contains architecture-independent functions mainly for waiting on a conditional variable / flag.
+ */
 #include <whackrealtime.hpp>
 
    unsigned short int TRUE_BOARD_STATE=9999;
@@ -13,7 +19,7 @@
     struct whackamole_generators_cpp {
         std::uniform_int_distribution<unsigned char> rnd_hole_dist;
         std::uniform_int_distribution<unsigned short int> rnd_state_dist;
-    } whackamole_generators_cpp;
+    } whackamole_generators_cpp; /** This struct contains random number generators for PC */
 #else
 #ifdef COMPILE_FOR_DUINO
     rtos::EventFlags cv_flags("WHACKAMOLE_FLAGS");
@@ -25,6 +31,12 @@
 #endif
 
 
+/**
+ * Set up random number generation
+ *
+ * On PC: use the std::uniform_int_distribution
+ * On Arduino: use random() function
+ */
 void setup_rtos_primitives(unsigned char num_holes) {
     unsigned short int num_states = 1;
     for (int i=0; i<num_holes; i++) num_states *= 3;
@@ -39,6 +51,11 @@ void setup_rtos_primitives(unsigned char num_holes) {
 #endif
 }
 
+/**
+ * Generate a random number (architecture-independent)
+ *
+ * @param NOARCH_RND    if set to RND_HOLES, will return a random number between 0 and the number of holes. If set to RND_STATES, will return a number between 0 and the maximal state.
+ */
 unsigned short int random_int_noarch(enum noarch_rnd NOARCH_RND) {
 #ifdef COMPILE_FOR_PC
     if (NOARCH_RND == RND_HOLES) {
@@ -68,6 +85,12 @@ unsigned short int random_int_noarch(enum noarch_rnd NOARCH_RND) {
 #endif
 }
 
+/**
+ * Sleep (architecture-independent)
+ *
+ * PC: Uses std::this_thread::sleep_for
+ * Arduino: Uses rtos::ThisThread::sleep_for
+ */
 void sleep_for_noarch(long millis) {
 #ifdef COMPILE_FOR_PC
     std::this_thread::sleep_for(std::chrono::milliseconds(millis));
@@ -78,6 +101,18 @@ void sleep_for_noarch(long millis) {
 #endif
 }
 
+/**
+ * Broadcasts state change across the system
+ *
+ * FIXME!!! This function has a confusing name and should be called `notify_all_threads_noarch` !!!
+ *
+ * Notifies all threads waiting on a given conditional variable (PC) or sets an event flag (Arduino).
+ * This function requires a thread that calls it to identify the conditional variable/event flag
+ * it wishes to set via the #thr enum. For example:
+ *   - the agent whacks the board, so it has to call this function with #thr set to BOARD_THREAD since the board class waits on the cv_board conditional variable.
+ *   - the camera captures an image, so it calls this function with #thr set to CAMERA_THREAD since the agent class waits on the cv_camera conditional variable.
+ *   - etc.
+ */
 void notify_single_thread_noarch(enum noarch_which_thread thr) {
     #ifdef COMPILE_FOR_PC
     switch (thr) {
@@ -119,7 +154,18 @@ void notify_single_thread_noarch(enum noarch_which_thread thr) {
     #endif
 }
 
-// return true if interrupted or notified, false otherwise. Will wait forever if timeout is set to zero.
+/**
+ * Wait on a conditional variable / event flag (architecture-independent)
+ *
+ * The thread calling this function has to identify the conditional variable (PC) / event flag (Arduino)
+ * it will wait on via the #thr enum. 
+ *
+ * @param thr           Which conditional variable / event flag to wait on (board, agent or camera)
+ * @param timeout_secs  How many seconds to wait before giving up. Setting this to 0 means waiting indefinitely.
+ * @param args          Optional arguments (currently not used)
+ * @returns             If timeout is 0: always returns false. Otherwise returns true if notification was received before the timer elapsed, or false in case of a timeout.
+ */
+
 bool wait_on_cv_noarch(enum noarch_which_thread thr, uint32_t timeout_secs, void* args) {
      bool ret = false;
      #ifdef COMPILE_FOR_PC
